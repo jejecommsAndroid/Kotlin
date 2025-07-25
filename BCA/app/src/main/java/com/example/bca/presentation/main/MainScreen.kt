@@ -1,4 +1,6 @@
+// ✅ Updated: MainScreen.kt
 package com.example.bca.presentation.main
+
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
@@ -15,11 +17,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.bca.domain.model.sampleContacts
 import com.example.bca.presentation.cards.CardsScreen
+import com.example.bca.presentation.contact.ContactDetailScreen
 import com.example.bca.presentation.contact.ContactsScreen
+import com.example.bca.presentation.contacts.EditContactScreen
 import com.example.bca.presentation.profile.ProfileScreen
 import com.example.bca.presentation.scan.ScanScreen
-
 
 @Composable
 fun MainScreen(navController1: NavHostController) {
@@ -56,10 +60,44 @@ fun MainScreen(navController1: NavHostController) {
             startDestination = Screen.Contacts.route,
             modifier = Modifier.padding(paddingValues)
         ) {
-            composable(Screen.Contacts.route) { ContactsScreen() }
+            composable(Screen.Contacts.route) {
+                ContactsScreen(
+                    onCardClick = { contact ->
+                        navController.navigate("contact_detail/${contact.name}")
+                    }
+                )
+            }
             composable(Screen.Cards.route) { CardsScreen() }
             composable(Screen.Scan.route) { ScanScreen() }
             composable(Screen.Profile.route) { ProfileScreen() }
+            composable("contact_detail/{contactName}") { backStackEntry ->
+                val contactName = backStackEntry.arguments?.getString("contactName")
+                val contact = sampleContacts.find { it.name == contactName }
+
+                contact?.let {
+                    ContactDetailScreen(
+                        contact = it,
+                        onEditClick = { /* Handle edit */ },
+                        onBackClick = { navController.popBackStack() } // ✅ Added
+                    )
+                }
+
+            }
+            composable("edit_contact/{contactName}") { backStackEntry ->
+                val contactName = backStackEntry.arguments?.getString("contactName")
+                val contact = sampleContacts.find { it.name == contactName }
+
+                contact?.let {
+                    EditContactScreen(
+                        contact = it,
+                        onSave = { updated ->
+                            // Save logic here (e.g. update local list or DB)
+                            navController.popBackStack() // Go back to details after save
+                        }
+                    )
+                }
+            }
+
         }
     }
 }
@@ -69,30 +107,25 @@ fun BottomNavigationBar(
     currentRoute: String?,
     onItemClick: (String) -> Unit
 ) {
-    NavigationBar {
-        NavigationBarItem(
-            selected = currentRoute == Screen.Contacts.route,
-            onClick = { onItemClick(Screen.Contacts.route) },
-            icon = { Icon(Icons.Default.ContactPage, contentDescription = "Contacts") },
-            label = { Text("Contacts") }
-        )
-        NavigationBarItem(
-            selected = currentRoute == Screen.Cards.route,
-            onClick = { onItemClick(Screen.Cards.route) },
-            icon = { Icon(Icons.Default.CreditCard, contentDescription = "Cards") },
-            label = { Text("Cards") }
-        )
-        NavigationBarItem(
-            selected = currentRoute == Screen.Scan.route,
-            onClick = { onItemClick(Screen.Scan.route) },
-            icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan") },
-            label = { Text("Scan") }
-        )
-        NavigationBarItem(
-            selected = currentRoute == Screen.Profile.route,
-            onClick = { onItemClick(Screen.Profile.route) },
-            icon = { Icon(Icons.Default.AccountBox, contentDescription = "Profile") },
-            label = { Text("Profile") }
-        )
+    val navItems = listOf(
+        Triple(Screen.Contacts, Icons.Default.ContactPage, "Contacts"),
+        Triple(Screen.Cards, Icons.Default.CreditCard, "Cards"),
+        Triple(Screen.Scan, Icons.Default.QrCodeScanner, "Scan"),
+        Triple(Screen.Profile, Icons.Default.AccountBox, "Profile"),
+    )
+
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
+        navItems.forEach { (screen, icon, label) ->
+            NavigationBarItem(
+                selected = currentRoute == screen.route,
+                onClick = { onItemClick(screen.route) },
+                icon = { Icon(imageVector = icon, contentDescription = label) },
+                label = { Text(label) },
+                alwaysShowLabel = false
+            )
+        }
     }
 }

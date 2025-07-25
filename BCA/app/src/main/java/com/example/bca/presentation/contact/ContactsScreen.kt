@@ -20,13 +20,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.bca.domain.model.contact.Contact
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun ContactsScreen(viewModel: ContactViewModel = viewModel()) {
+fun ContactsScreen(
+    viewModel: ContactViewModel = viewModel(),
+    onCardClick: (Contact) -> Unit // ✅ Add this parameter
+) {
     var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
     val listState = rememberLazyListState()
     val contacts by viewModel.contacts.collectAsState()
@@ -165,13 +168,13 @@ fun ContactsScreen(viewModel: ContactViewModel = viewModel()) {
                                     ContactListItem(
                                         contact = contact,
                                         onFavoriteClick = { viewModel.toggleFavorite(it) },
-                                        onDeleteClick = { viewModel.deleteContact(it) }
+                                        onDeleteClick = { viewModel.deleteContact(it) },
+                                        onClick = { onCardClick(contact) } // ✅ Now works
                                     )
                                 }
                             }
                         }
                     }
-
                 }
             }
         }
@@ -186,7 +189,6 @@ fun ContactsScreen(viewModel: ContactViewModel = viewModel()) {
             }
         }
 
-        //  FAB Hide/Show on scroll
         AnimatedVisibility(
             visible = showSearchBar,
             enter = fadeIn() + slideInVertically { it },
@@ -211,24 +213,13 @@ fun ContactsScreen(viewModel: ContactViewModel = viewModel()) {
     }
 }
 
+
 @Composable
 fun RefreshSpinner() {
-    val infiniteTransition = rememberInfiniteTransition(label = "")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 800, easing = LinearEasing)
-        ),
-        label = "rotate"
-    )
-
-    Icon(
-        imageVector = Icons.Default.Refresh,
-        contentDescription = "Refreshing",
-        modifier = Modifier
-            .size(30.dp)
-            .rotate(rotation),
-        tint = MaterialTheme.colorScheme.primary
+    CircularProgressIndicator(
+        modifier = Modifier.size(32.dp),
+        color = MaterialTheme.colorScheme.primary,
+        strokeWidth = 3.dp
     )
 }
+

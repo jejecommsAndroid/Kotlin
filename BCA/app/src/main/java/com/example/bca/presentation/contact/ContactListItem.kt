@@ -4,11 +4,13 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -18,12 +20,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.bca.domain.model.Contact
+import com.example.bca.domain.model.contact.Contact
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -33,11 +37,17 @@ fun ContactListItem(
     contact: Contact,
     modifier: Modifier = Modifier,
     onFavoriteClick: (Contact) -> Unit,
-    onDeleteClick: (Contact) -> Unit
+    onDeleteClick: (Contact) -> Unit,
+    onClick: (Contact) -> Unit // ✅ Added
+
 ) {
-    var offsetX by remember { mutableStateOf(0f) }
-    var isVisible by remember { mutableStateOf(true) }
+    val buttonWidth = 70.dp
+    val totalActions = 3
+    val maxSwipe = with(LocalDensity.current) { (buttonWidth * totalActions + 20.dp).toPx() }
+
+    val swipeOffset = remember { mutableStateOf(0f) }
     val scope = rememberCoroutineScope()
+    var isVisible by remember { mutableStateOf(true) }
 
     AnimatedVisibility(
         visible = isVisible,
@@ -48,54 +58,63 @@ fun ContactListItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
-                .height(IntrinsicSize.Min)
-        ) {
-            // Background delete icon
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.Red),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = Color.White,
-                    modifier = Modifier.padding(end = 20.dp)
-                )
-            }
-
-            // Foreground with Card for elevation and corners
-            Card(
-                modifier = Modifier
-                    .offset { IntOffset(offsetX.roundToInt(), 0) }
-                    .pointerInput(Unit) {
-                        detectHorizontalDragGestures(
-                            onHorizontalDrag = { _, dragAmount ->
-                                offsetX = (offsetX + dragAmount).coerceIn(-300f, 0f)
-                            },
-                            onDragEnd = {
-                                if (offsetX < -150f) {
-                                    scope.launch {
-                                        isVisible = false
-                                        delay(300)
-                                        onDeleteClick(contact)
-                                    }
+                .height(80.dp)
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { _, dragAmount ->
+                            val newOffset = (swipeOffset.value + dragAmount).coerceIn(-maxSwipe, 0f)
+                            swipeOffset.value = newOffset
+                        },
+                        onDragEnd = {
+                            scope.launch {
+                                if (swipeOffset.value < -maxSwipe / 2) {
+                                    swipeOffset.value = -maxSwipe
                                 } else {
-                                    scope.launch { offsetX = 0f }
+                                    swipeOffset.value = 0f
                                 }
                             }
-                        )
-                    },
-                elevation = CardDefaults.cardElevation(6.dp),
+                        }
+                    )
+                }
+        ) {
+            // Background action buttons
+            Row(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(16.dp)),
+                horizontalArrangement = Arrangement.End
+            ) {
+                ActionItem(icon = Icons.Default.Delete, color = Color.Red, label = "Delete") {
+                    scope.launch {
+                        isVisible = false
+                        delay(250)
+                        onDeleteClick(contact)
+                    }
+                }
+                ActionItem(icon = Icons.Default.Call, color = Color.Green, label = "Call") {
+                    println("Calling ${contact.name}")
+                    scope.launch { swipeOffset.value = 0f }
+                }
+                ActionItem(icon = Icons.Default.Star, color = Color(0xFFFFC107), label = "Fav") {
+                    onFavoriteClick(contact)
+                    scope.launch { swipeOffset.value = 0f }
+                }
+            }
+
+            // Foreground contact card
+            Card(
+                modifier = Modifier
+                    .offset { IntOffset(swipeOffset.value.roundToInt(), 0) }
+                    .fillMaxSize()
+                .clickable { onClick(contact) }, // ✅ Fix: pass contact here
+            elevation = CardDefaults.cardElevation(6.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .background(Color.White)
-                        .padding(16.dp),
+                        .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Avatar
@@ -118,7 +137,7 @@ fun ContactListItem(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = contact.name.first().toString(),
+                                text = contact.name.first().uppercaseChar().toString(),
                                 color = Color.White,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
@@ -151,4 +170,32 @@ fun ContactListItem(
             }
         }
     }
+
 }
+
+@Composable
+fun ActionItem(icon: ImageVector, color: Color, label: String, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .width(70.dp)
+            .fillMaxHeight()
+            .background(color)
+            .clickable { onClick() },
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = Color.White
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp
+        )
+    }
+}
+

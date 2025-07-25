@@ -27,7 +27,15 @@ fun AppNavGraph(
         composable(Screen.Main.route) { MainScreen(navController) }
 
         // Tab screens
-        composable(Screen.Contacts.route) { ContactsScreen() }
+        composable(Screen.Contacts.route) {
+            ContactsScreen(
+                onCardClick = { contact ->
+                    // Navigate to contact detail (you need to set up the route first)
+                    // Example: navController.navigate("contact_detail/${contact.id}")
+                }
+            )
+        }
+
         composable(Screen.Cards.route) { CardsScreen() }
         composable(Screen.Scan.route) { ScanScreen() }
         composable(Screen.Profile.route) { ProfileScreen() }

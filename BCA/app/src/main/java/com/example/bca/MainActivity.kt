@@ -12,15 +12,10 @@ import org.koin.core.context.GlobalContext.startKoin
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Start Koin
-        startKoin {
-            androidContext(this@MainActivity)
-            modules(appModule)
-        }
-
         enableEdgeToEdge()
 
         setContent {
+
             BCATheme {
                 AppNavGraph()
             }

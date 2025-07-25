@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bca.data.repository.ContactPreferenceManager
-import com.example.bca.domain.model.Contact
+import com.example.bca.domain.model.contact.Contact
 import com.example.bca.domain.model.sampleContacts
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -41,6 +41,13 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
     fun deleteContact(contact: Contact) {
         _allContacts.value = _allContacts.value.filterNot { it.name == contact.name }
     }
+    fun updateContact(updated: Contact) {
+        _allContacts.value = _allContacts.value.map {
+            if (it.name == updated.name) updated else it
+        }
+    }
+
+
 
 
 }
